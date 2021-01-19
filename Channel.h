@@ -96,3 +96,5 @@ class Channel {
     CallBack errorHandler_;
     CallBack connHandler_;
 };
+
+typedef std::shared_ptr<Channel> SPChannel;
