@@ -34,5 +34,84 @@ EventLoop::EventLoop():
 
 EventLoop::~EventLoop() {
     assert(!looping_);
+    close(wakeupFd_);
     t_loopInThisThread = NULL;
+}
+
+void EventLoop::handleConn() {
+    updatePoller(wakeupChannel_, 0);
+}
+
+void EventLoop::wakeup() {
+    u_int64_t one = 1;
+    int n = write(wakeupFd_, &one, sizeof(one));
+    if (n < 0) {
+        LOG << "EventLoop::wakeup() writes " << n << " bytes instead of 8";
+    }
+}
+
+void EventLoop::handleRead() {
+    u_int64_t one;
+    int n = read(wakeupFd_, &one, sizeof(one));
+    if (n < 0) {
+        LOG << "EventLoop::handleRead read " << n << " bytes instead of 8";
+    }
+    wakeupChannel_->setEvents(EPOLLIN | EPOLLET);
+}
+
+void EventLoop::runInLoop(Functors &&cb) {
+    if (isInLoopTrehad())
+        cb();
+    else {
+        //pendingFunctors.push_back(std::move(cb));
+        queueInLoop(std::move(cb));
+    }
+}
+
+void EventLoop::queueInLoop(Functors &&cb) {
+    {
+        MutexLockGuard lock(&mutex_);
+        pendingFunctors.push_back(std::move(cb));
+    }
+    if (!isInLoopTrehad() || callingPendingFunctors_)
+        wakeup();
+}
+
+void EventLoop::loop() {
+    assertInLoopThread();
+    assert(!looping_);
+    looping_ = true;
+    quit_ = false;
+    std::vector<SPChannel> ret;
+
+    while (!quit_) {
+        ret.clear();
+        ret = poller_->poll();
+        eventHandling_ = true;
+        for (auto it : ret)
+            it->handlerEvents();
+        eventHandling_ = false;
+        doPendingFunctors();
+        poller_->handleExpired();
+    }
+
+    looping_ = false;
+}
+
+void EventLoop::doPendingFunctors() {
+    std::vector<Functors> do;
+    {
+        MutexLockGuard lock(mutex_);
+        do.swap(pendingFunctors_);
+    }
+    callingPendingFunctors_ = true;
+    for (auto it : do)
+        it();
+    callingPendingFunctors_ = false;
+}
+
+void EventLoop::quit() {
+    quit_ = true;
+    if (!isInLoopTrehad())
+        wakeup();
 }

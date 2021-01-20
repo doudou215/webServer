@@ -4,7 +4,7 @@
 #include <vector>
 #include "Channel.h"
 //#include "Epoll.h"
-//#include "Util.h"
+#include "Util.h"
 //#include "base/CurrentThread.h"
 //#include "base/Logging.h"
 //#include "base/Thread.h"
@@ -41,7 +41,7 @@ class EventLoop : noncopyable {
     }
  private:
     
-    std::vector<Functors> pendingFunctors;
+    std::vector<Functors> pendingFunctors_;
     const pid_t threadId_;
     bool looping_;
     bool quit_;
@@ -54,6 +54,6 @@ class EventLoop : noncopyable {
     
     void wakeup();
     void handleRead();
-    void hanleConn();
+    void handleConn();
     void doPendingFunctors();
 };
