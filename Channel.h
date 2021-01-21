@@ -12,6 +12,7 @@ class HttpData;
 
 class Channel {
  public:
+    typedef std::function<void()> CallBack;
     Channel(EventLoop *loop, int fd);
     Channel(EventLoop *loop);
 
@@ -81,7 +82,6 @@ class Channel {
     }
 
  private:
-    typedef std::function<void()> CallBack;
     EventLoop *loop_;
     int fd_;
 

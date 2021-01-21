@@ -9,6 +9,7 @@
 #include "EventLoop.h"
 #include "Util.h"
 
+// epoll_add will use fd_ to add events on the epollFd_, 0 means what ?
 Channel::Channel(EventLoop *loop) : loop_(loop), fd_(0), event(0), lastevent(0) {
 
 }
@@ -17,7 +18,7 @@ Channel::Channel(EventLoop *loop, int fd) : loop_(loop), fd_(fd), event(0), last
 
 }
 
-void Channel::handleConn() {
+void Channel::handlerConn() {
     if (connHandler_)
         connHandler_();
 }
