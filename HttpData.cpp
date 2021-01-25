@@ -105,4 +105,59 @@ std::string MimeType::getMime(const std::string &suffix) {
 }
 
 
+HttpData::HttpData(EventLoop *loop, int connfd)
+    : loop_(loop),
+    fd_(connfd),
+    channel_(new Channel(loop, connfd)),
+    error_(false),
+    connectionState_(H_CONNECTED),
+    method_(METHOD_GET),
+    HTTPVersion_(HTTP_11),
+    nowReadPos_(0),
+    state_(STATE_PARSE_URI),
+    hState_(H_START),
+    keepAlive_(false) {
+    channel_->setReadHandler(bind(&HttpData::handleRead, this));
+    channel_->setWriteHandler(bind(&HttpData::handleWrite, this));
+    channel_->setConnHanler(bind(&HttpData::handleConn, this));
+}
+
+void HttpData::handleRead() {
+    __uint32_t &ev = channel_->getEvents(); // not clear
+    
+    do {
+        bool zero = false;
+        int num = readn(fd_, inBuffer_, zero);
+        LOG << "Request: " << inBuffer_;
+        if (connectionState_ == H_DISCONNECTING) {
+            inBuffer_.clear();
+            break;
+        }
+
+        if (num < 0) {
+            perror("Http::handleRead read bytes < 0");
+            error_ = true;
+            handleError(fd_, 400, "Bad Request");
+            break;
+        }
+
+        if (zero) {
+            connectionState_ = H_DISCONNECTING;
+            if (num == 0)
+                break;
+        }
+
+        if (state_ = STATE_PARSE_URI) {
+            URIState flag = parseURI();
+            if (flag == PARSE_URI_AGAIN)
+                break;
+            else if (flag == PARSE_URI_ERROR) {
+                perror("HttpData::handleRead parseURI error");
+            }
+            
+        }
+
+    } while(false)
+}
+
 

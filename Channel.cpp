@@ -18,7 +18,7 @@ Channel::Channel(EventLoop *loop, int fd) : loop_(loop), fd_(fd), event(0), last
 
 }
 
-void Channel::handlerConn() {
+void Channel::handleConn() {
     if (connHandler_)
         connHandler_();
 }

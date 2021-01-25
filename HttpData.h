@@ -74,8 +74,8 @@ class HttpData : public std::enable_shared_from_this<HttpData> {
     std::shared_ptr<Channel> getChannel() { return channel_; }
     EventLoop *getLoop() { return loop_;}
     void handleClose();
-    void newEvent(); // 
-    ?
+    void newEvent(); // ?
+
  private:
     EventLoop *loop_;
     std::shared_ptr<Channel> channel_;
@@ -84,7 +84,7 @@ class HttpData : public std::enable_shared_from_this<HttpData> {
     std::string inBuffer_;
     std::string outBuffer_;
     bool error_;
-    ConnectionState connectionState_;
+    ConnectionState connectionState_; 
 
     HttpMethod method_;
     HttpVersion HTTPVersion_;
@@ -92,14 +92,14 @@ class HttpData : public std::enable_shared_from_this<HttpData> {
     std::string path_;
     int nowReadPos_;
     ProcessState state_;
-    ParseState hState_;
+    ParseState hState_; //?
     bool keepAlive_;
     std::map<std::string, std::string> headers_;
 
     void handleRead();
     void handleWrite();
     void handleConn();
-    void handleError(int fd, int err_num, std::string short_msg);
+    void handleError(int fd, int err_num, std::string short_msg); //actually not used
     URIState parseURI();
     HeaderState parseHeaders();
     AnalysisState analysisRequest();

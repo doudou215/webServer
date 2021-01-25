@@ -61,8 +61,8 @@ class Channel {
     void handleRead();
     void handleWrite();
     void handleError();
-    void handlerConn();
-    void handlerEvents() {
+    void handleConn();
+    void handleEvents() {
         event = 0;
         // peer stop connection, we will receive a FIN
         if ((revent & EPOLLHUP) && !(revent & EPOLLIN)) {
@@ -78,7 +78,7 @@ class Channel {
             handleRead();
         if (revent & EPOLLOUT)
             handleWrite();
-        handlerConn();
+        handleConn();
     }
 
  private:

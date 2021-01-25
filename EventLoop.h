@@ -26,7 +26,7 @@ class EventLoop : noncopyable {
     void runInLoop(Functors &&cb);
     void queueInLoop(Functors &&cb);
     // what's this up to?
-    void shutdown(shared_ptr<Channel> channel) { shutDownWR(channel->getFd()); }
+    void shutdown(std::shared_ptr<Channel> channel) { shutDownWR(channel->getFd()); }
 
     void removeFromPoller(SPChannel channel) {
         poller_->epoll_del(channel);
