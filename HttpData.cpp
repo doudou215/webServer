@@ -128,7 +128,7 @@ void HttpData::handleRead() {
     do {
         bool zero = false;
         int num = readn(fd_, inBuffer_, zero);
-        LOG << "Request: " << inBuffer_;
+        // LOG << "Request: " << inBuffer_;
         if (connectionState_ == H_DISCONNECTING) {
             inBuffer_.clear();
             break;
@@ -147,17 +147,174 @@ void HttpData::handleRead() {
                 break;
         }
 
+        // parse the request line
         if (state_ = STATE_PARSE_URI) {
             URIState flag = parseURI();
             if (flag == PARSE_URI_AGAIN)
                 break;
             else if (flag == PARSE_URI_ERROR) {
                 perror("HttpData::handleRead parseURI error");
+                LOG << "FD = " << fd_ << "," << inBuffer_ << "*****";
+                inBuffer_.clear();
+                error_ = true;
+                handleError(fd_, 400, "Bad Request");
+                break;
             }
-            
+            else
+                state_ = STATE_PARSE_HEADERS;
         }
 
-    } while(false)
+        if (state_ == STATE_PARSE_HEADERS) {
+            HeaderState  flag = parseHeaders();
+            if (flag == PARSE_HEADER_AGAIN)
+                break;
+            else if (flag == PARSE_HEADER_ERROR) {
+                error_ = true;
+                inBuffer_.clear();
+                perror("HttpData::handleRead parseHeaders error");
+                handleError(fd_, 400, "Bad Request");
+                break;
+            }
+            
+            if (method_ == METHOD_POST) 
+                state_ = STATE_RECV_BODAY;
+            else
+                state_ = STATE_ANALYSIS;
+        }
+
+        // to make sure the body length in the post request
+        if (state_ == STATE_RECV_BODAY) {
+            int content_length = - 1;
+            if (headers_.find("Content-Length") == headers_.end()) {
+                error_ = true;
+                handleError(fd_, 400, "Bad Request");
+                break;
+            }
+            content_length = stoi(headers_["Content-Length"]);
+            if (static_cast<int>(inBuffer_.size()) < content_length)
+                break;
+            state_ = STATE_ANALYSIS;
+        }
+
+        if (state_ == STATE_ANALYSIS) {
+            AnalysisState flag = analysisRequest();
+            if (flag == ANALYSIS_SUCCESS) {
+                state_ = STATE_FINISH;
+                break;
+            }
+            error_ = true;
+            break;
+        }
+    } while(false);
+
+    if (!error_) {
+        // first to reply peer
+        if (outBuffer_.size() > 0) {
+            handleWrite();
+        }
+
+        // not clear this section used for what ?
+        if (!error_ && state_ == STATE_FINISH) {
+            this->reset();
+
+            if (connectionState_ != H_DISCONNECTING && inBuffer_.size() > 0)
+                handleRead();
+        }
+
+        else if (!error_ && connectionState_ != H_DISCONNECTED)
+            ev |= EPOLLIN;
+    }
 }
 
+void HttpData::handleWrite() {
+    __uint32_t &ev = channel_->getEvents();
+    if (!error_ && connectionState_ != H_DISCONNECTED) {
+        int num_write = writen(fd_, outBuffer_);
+        if (num_write < 0) {
+            error_ = true;
+            ev = 0;
+            perror("HttpData::handleWrite write error");
+        }
+
+        if (outBuffer_.size() > 0)
+            ev |= EPOLLOUT;
+    }
+}
+
+URIState HttpData::parseURI() {
+    std::string &str = inBuffer_;
+    
+    size_t pos = str.find('\r', nowReadPos_);
+    if (pos < 0)
+        return PARSE_URI_AGAIN;
+    
+    std::string request_line = str.substr(0, pos);
+    if (str.size() > pos + 1)
+        str = str.substr(pos + 1);
+    else
+        str.clear();
+    std::cout<<str[0]<<std::endl;
+
+    //size_t length = request_line.size();
+    int posGet = request_line.find("GET");
+    int posPost = request_line.find("POST");
+    int posHead = request_line.find("HEAD");
+    // parse method
+    if (posGet >= 0) {
+        pos = posGet;
+        method_ = METHOD_GET;
+    }
+    else if (posPost >= 0) {
+        pos = posPost;
+        method_ = METHOD_POST;
+    }
+    else if (posHead >= 0) {
+        pos = posHead;
+        method_ = METHOD_HEAD;
+    }
+    else
+        return PARSE_URI_ERROR;
+    // parse filename
+    pos = request_line.find('/', pos);
+    // in this case means only a GET in request line
+    if (pos < 0) {
+        fileName_ = "index.html";
+        HTTPVersion_ = HTTP_11;
+        return PARSE_URI_SUCCESS;
+    }
+    // normal case
+    // GET /fileName HTTP/1.1\r\n
+    else {
+        // _pos means second blank which after the filename.
+        size_t _pos = request_line.find(' ', pos);
+        if (_pos < 0)
+            return PARSE_URI_ERROR;
+        if (_pos - pos > 1) {
+            fileName_ = request_line.substr(pos + 1, _pos - pos - 1);
+            size_t __pos = fileName_.find('?');
+            if (__pos > 0)
+                fileName_ = fileName_.substr(0, __pos);
+        }
+        else
+            fileName_ = "index.html";
+        pos = _pos;
+    }
+    // parse httpversion
+    // GET /fileName HTTP/1.1(\r\n) pos is the position after the filename.
+    pos = request_line.find("/", pos);
+    if (pos < 0)
+        return PARSE_URI_ERROR;
+    else {
+        if (request_line.size() - pos < 4)
+            return PARSE_URI_ERROR;
+        std::string ver = request_line.substr(pos + 1, 3);
+        if (ver == "1.1")
+            HTTPVersion_ = HTTP_11;
+        else if (ver == "1.0")
+            HTTPVersion_ = HTTP_10;
+        else
+            return PARSE_URI_ERROR;
+    }
+    return PARSE_URI_SUCCESS;
+}
 

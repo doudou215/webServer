@@ -76,6 +76,8 @@ class Channel {
         // EPOLLRDHUP peer stops writing, we cann't read any data from the fd.
         if (revent & (EPOLLIN | EPOLLPRI | EPOLLRDHUP))
             handleRead();
+
+      
         if (revent & EPOLLOUT)
             handleWrite();
         handleConn();
