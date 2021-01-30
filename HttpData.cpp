@@ -323,8 +323,8 @@ HeaderState HttpData::parseHeaders() {
     int key_begin = -1, key_end = -1, value_begin = -1, value_end = -1;
     int last_read_position = -1;
     bool not_finish = true;
-
-    for (size_t i = 0; i < str.size() && !not_finish; i++) {
+    size_t i = 0;
+    for (; i < str.size() && !not_finish; i++) {
         switch (hState_)
         {
         case H_START: {
@@ -417,3 +417,74 @@ HeaderState HttpData::parseHeaders() {
     return PARSE_HEADER_AGAIN;
 }
 
+AnalysisState HttpData::analysisRequest() {
+    if (method_ == METHOD_POST) {
+
+    }
+    else if (method_ == METHOD_GET || method_ == METHOD_HEAD) {
+        std::string header;
+        header += "HTTP/1.1 200 OK\r\n";
+        if (headers_.find("Connection") != headers_.end() &&
+            (headers_["Connection"] == "Keep-Alive" || 
+             headers_["Connection"] == "keep-alive")) {
+            keepAlive_ = true;
+            header += "Connection: Keep-Alive\r\n";
+            header += "Keep-Alive: timeout=" + std::to_string(DEFAULT_KEEP_ALIVE_TIME)
+                       + "\r\n";
+        }
+        int dot_pos = fileName_.find(".");
+        std::string filetype;
+        if (dot_pos < 0)
+            filetype = MimeType::getMime("default");
+        else
+            filetype = MimeType::getMime(fileName_.substr(dot_pos));
+        if (fileName_ == "hello") {
+            outBuffer_ = 
+                        "HTTP/1.1 200 OK\r\nContent-type: text/plain\r\n\r\nHello Word";
+            return ANALYSIS_SUCCESS;
+        }
+        if (fileName_ == "favicon.ico") {
+            header += "Content-Type: image/png\r\n";
+            header += "COntent-Length: " + std::to_string(sizeof(favicon)) + "\r\n";
+            header += "Server: Apache\r\n";
+
+            header += "\r\n";
+            outBuffer_ += header;
+            outBuffer_ += std::string(favicon, favicon + sizeof(favicon));
+            return ANALYSIS_SUCCESS;
+        }
+
+        struct stat sbuf;
+        if (stat(fileName_.c_str(), &sbuf) < 0) {
+            header.clear();
+            handleError(fd_, 404, "Not Found!");
+            return ANALYSIS_ERROR;
+        }
+        header += "Content-Type: " + filetype + "\r\n";
+        header += "Content-lenght: " + std::to_string(sbuf.st_size) + "\r\n";
+        header += "Server: Apache\r\n";
+        header += "\r\n";
+
+        outBuffer_ += header;
+
+        if (method_ == METHOD_HEAD)
+            return ANALYSIS_SUCCESS;
+        int srcfd = open(fileName_.c_str(), O_RDONLY, 0);
+        if (srcfd < 0) {
+            outBuffer_.clear();
+            handleError(fd_, 404, "Not Found");
+            return ANALYSIS_ERROR;
+        }
+        void *srcContent = mmap(NULL, sbuf.st_size, PROT_READ, MAP_PRIVATE, srcfd, 0);
+        close(srcfd);
+        if (srcContent == (void *) -1) {
+            munmap(srcContent, sbuf.st_size);
+            outBuffer_.clear();
+            handleError(fd_, 404, "Not Found");
+            return ANALYSIS_ERROR;
+        }
+        char *src_addr = static_cast<char *>(srcContent);
+        outBuffer_ += std::string(src_addr, src_addr + sbuf.st_size);
+        return ANALYSIS_SUCCESS;
+    }
+}
