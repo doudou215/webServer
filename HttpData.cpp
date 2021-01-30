@@ -318,3 +318,102 @@ URIState HttpData::parseURI() {
     return PARSE_URI_SUCCESS;
 }
 
+HeaderState HttpData::parseHeaders() {
+    std::string &str = inBuffer_;
+    int key_begin = -1, key_end = -1, value_begin = -1, value_end = -1;
+    int last_read_position = -1;
+    bool not_finish = true;
+
+    for (size_t i = 0; i < str.size() && !not_finish; i++) {
+        switch (hState_)
+        {
+        case H_START: {
+            if (str[i] == '\r' || str[i] == '\n')
+                break;
+            key_begin = i;
+            last_read_position = i;
+            hState_ = H_KEY;
+            break;
+        }
+        case H_KEY: {
+            if (str[i] == ':') {
+                key_end = i;
+                if (key_end - key_begin <= 0)
+                    return PARSE_HEADER_ERROR;
+                hState_ = H_COLON;
+            }
+            else if (str[i] == '\r' || str[i] == '\n')
+                return PARSE_HEADER_ERROR;
+            break;
+        }
+        case H_COLON: {
+            if (str[i] == ' ') {
+                hState_ = H_SPACES_AFTER_COLON;
+            }
+            else
+                return PARSE_HEADER_ERROR;
+            break;
+        }
+        case H_SPACES_AFTER_COLON: {
+            hState_ = H_VALUE;
+            value_begin = i;
+            break;
+        }
+        case H_VALUE: {
+            if (str[i] == '\r') {
+                hState_ = H_CR;
+                value_end = i;
+                if (value_end - value_begin <= 0)
+                    return PARSE_HEADER_ERROR;
+            }
+            else if (i - value_begin > 255)
+                return PARSE_HEADER_ERROR;
+            break;
+        }
+        case H_CR: {
+            if (str[i] == '\n') {
+                hState_ = H_LF;
+                std::string key(str.begin() + key_begin, str.begin() + key_end);
+                std::string value(str.begin() + value_begin, str.begin() + value_end);
+                headers_[key] = value;
+                last_read_position = i;
+            }
+            else 
+                return PARSE_HEADER_ERROR;
+            break;
+        }
+        case H_LF: {
+            if (str[i] == '\r') {
+                hState_ = H_END_CR;
+            }
+            else {
+                hState_ = H_KEY; // another turn
+                key_begin = i;
+            }
+            break;
+        }
+        case H_END_CR: {
+            if (str[i] == '\n') {
+                hState_ = H_END_LF;
+            }
+            else
+                return PARSE_HEADER_ERROR;
+            break;
+        }
+        case H_END_LF: {
+            not_finish = false;
+            //key_begin = i;
+            last_read_position = i;
+            break;
+        }
+        }
+    }
+    if (hState_ == H_END_LF) {
+            str = str.substr(i);
+            return PARSE_HEADER_SUCCESS;
+        }
+    // in case recv data is not complete
+    str = str.substr(last_read_position);
+    return PARSE_HEADER_AGAIN;
+}
+
