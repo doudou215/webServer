@@ -90,7 +90,7 @@ class HttpData : public std::enable_shared_from_this<HttpData> {
     HttpVersion HTTPVersion_;
     std::string fileName_;
     std::string path_;
-    int nowReadPos_;
+    int nowReadPos_; // not used at all
     ProcessState state_;
     ParseState hState_; //?
     bool keepAlive_;

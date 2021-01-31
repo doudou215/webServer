@@ -7,6 +7,7 @@
 #include "EventLoop.h"
 #include "Util.h"
 #include "time.h"
+#include <string.h>
 
 std::unordered_map<std::string, std::string> MimeType::mime;
 pthread_once_t MimeType::once_control = PTHREAD_ONCE_INIT;
@@ -488,3 +489,103 @@ AnalysisState HttpData::analysisRequest() {
         return ANALYSIS_SUCCESS;
     }
 }
+
+void HttpData::handleError(int fd, int code, std::string code_mesg) {
+    std::string header_buf, body_buf;
+    code_mesg = " " + code_mesg;
+
+    body_buf += "<html><title>something happended</title>";
+    body_buf += "body bgcolor=\"ffffff\">";
+    body_buf += std::to_string(code) + code_mesg;
+    body_buf += "<hr><em> Apache Fire</em>\n</body></html>";
+
+    header_buf += "HTTP/1.1 " + std::to_string(code) + code_mesg + "\r\n";
+    header_buf += "Content-Type: text/html\r\n";
+    header_buf += "Connection: Close\r\n";
+    header_buf += "Content-Length: " + std::to_string(body_buf.size()) + "\r\n";
+    header_buf += "Liang Ge Ge Go!!\r\n";
+    header_buf += "\r\n";
+
+    char send_buf[4096];
+    sprintf(send_buf, "%s", header_buf.c_str());
+    // why use writen(int, string) directly ?
+    writen(fd, send_buf, strlen(send_buf));
+    sprintf(send_buf, "%s", body_buf.c_str());
+    writen(fd, send_buf, strlen(send_buf));
+}
+
+void HttpData::handleClose() {
+    connectionState_ = H_DISCONNECTED;
+    std::shared_ptr<HttpData> guard(shared_from_this());
+    loop_->removeFromPoller(channel_);
+}
+
+void HttpData::newEvent() {
+    channel_->setEvents(DEFAULT_EVENT);
+    loop_->addPoller(channel_, DEFAULT_EXPIRED_TIME);
+}
+
+void HttpData::seperateTimer() {
+    if (timer_.lock()) {
+        std::shared_ptr<TimerNode> myTimer(timer_.lock());
+        myTimer->clearReq();
+        timer_.reset();
+    }
+}
+
+void HttpData::reset() {
+    path_.clear();
+    fileName_.clear();
+    state_ = STATE_PARSE_URI;
+    hState_ = H_START;
+    headers_.clear();
+
+    if (timer_.lock()) {
+        std::shared_ptr<TimerNode> myTimer(timer_.lock());
+        myTimer->clearReq();
+        timer_.reset();
+    }
+}
+
+// highly attention, invoke handleConn() in channel::handleEvent()
+void HttpData::handleConn() {
+    seperateTimer();
+    __uint32_t &event = channel_->getEvents();
+
+    if (!error_ && connectionState_ == H_CONNECTED) {
+        // event != 0 means still concerning something to be happen in poller.       
+        if (event != 0) {
+            int timeout = DEFAULT_EXPIRED_TIME;
+            if (keepAlive_)
+                timeout = DEFAULT_KEEP_ALIVE_TIME;
+            if ((event & EPOLLIN) && (event & EPOLLOUT)) {
+                event = __uint32_t(0);
+                event |= EPOLLOUT;
+            }
+            event |= EPOLLET;
+            loop_->updatePoller(channel_, timeout);
+            std::cout<<"test HttpData::handleConn if event = 0 "<<std::endl;
+        }
+        else if (keepAlive_) {
+            int timeout = DEFAULT_KEEP_ALIVE_TIME;
+            event |= (EPOLLIN | EPOLLET);
+            loop_->updatePoller(channel_, timeout);
+        }
+        else {
+            event |= (EPOLLIN | EPOLLET);
+            int timeout = (DEFAULT_EXPIRED_TIME >> 1);
+            loop_->updatePoller(channel_, timeout);
+        }
+    }
+    // H_DISCONNECTING means peer close the connection.
+    // when event is not focusing on EPOLLOUT, close the connection
+    else if (!error_ && connectionState_ == H_DISCONNECTING && 
+             (event & EPOLLOUT)) {
+            event = (EPOLLOUT | EPOLLET);
+    }
+    else {
+        loop_->runInLoop(bind(&HttpData::handleClose, shared_from_this()));
+    }
+
+}
+
