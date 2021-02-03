@@ -8,7 +8,7 @@
 #include <deque>
 #include <queue>
 #include "Util.h"
-//#include "base/Logging.h"
+#include "base/Logging.h"
 #include <arpa/inet.h>
 #include <iostream>
 
@@ -16,7 +16,8 @@ const int EVENTSNUM = 4096;
 const int WAITING_TIME = 10000; // counts at milliseconds, and equal to 10s
 
 Epoll::Epoll() : epollFd_(epoll_create1(EPOLL_CLOEXEC)), events_(EVENTSNUM) {
-    assert(epollFd_ < 0);
+    //printf("%s", strerror(errno));
+    assert(epollFd_ > 0);
 }
 
 Epoll::~Epoll() {
@@ -100,7 +101,7 @@ std::vector<std::shared_ptr<Channel>> Epoll::getEventsFromRequest(int events_num
     return ret;
 }
 
-void Epoll::handlerExpired() {
+void Epoll::handleExpired() {
     timeManager_.handleExpiredEvent();
 }
 

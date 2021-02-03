@@ -5,7 +5,7 @@
 #include <queue>
 #include "base/Mutex.h"
 #include "base/noncopyable.h"
-
+#include "HttpData.h"
 class HttpData;
 //typedef std::shared_ptr<HttpData> SPHttpData;
 
@@ -29,8 +29,8 @@ class TimerNode {
 };
 
 struct TimerComp {
-    bool operator()(TimerNode &t1, TimerNode &t2) {
-        return t1.getExpiredTime() > t2.getExpiredTime();
+    bool operator()(std::shared_ptr<TimerNode> &t1, std::shared_ptr<TimerNode> &t2) {
+        return t1->getExpiredTime() > t2->getExpiredTime();
     }
 };
 

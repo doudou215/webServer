@@ -50,7 +50,7 @@ void TimerNode::clearReq() {
 void TimerManager::add_timer(SPHttpData data, int timeout) {
     SPTimerNode node(new TimerNode(data, timeout));
     TimerQueue_.push(node);
-    SPHttpData->linkTimer(node);  // not clear with this function?
+    data->linkTimer(node);  // set http timer
 }
 
 void TimerManager::handleExpiredEvent() {

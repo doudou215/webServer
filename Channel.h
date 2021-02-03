@@ -6,9 +6,9 @@
 #include <string>
 #include <unordered_map>
 #include "Timer.h"
-
+#include "HttpData.h"
 class EventLoop;
-class HttpData;
+// class HttpData;
 
 class Channel {
  public:
@@ -28,7 +28,7 @@ class Channel {
         errorHandler_ = cb;
     }
 
-    void setConnHanler(CallBack &&cb) {
+    void setConnHandler(CallBack &&cb) {
         connHandler_ = cb;
     }
 

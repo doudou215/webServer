@@ -120,7 +120,7 @@ HttpData::HttpData(EventLoop *loop, int connfd)
     keepAlive_(false) {
     channel_->setReadHandler(bind(&HttpData::handleRead, this));
     channel_->setWriteHandler(bind(&HttpData::handleWrite, this));
-    channel_->setConnHanler(bind(&HttpData::handleConn, this));
+    channel_->setConnHandler(bind(&HttpData::handleConn, this));
 }
 
 void HttpData::handleRead() {
@@ -149,7 +149,7 @@ void HttpData::handleRead() {
         }
 
         // parse the request line
-        if (state_ = STATE_PARSE_URI) {
+        if (state_ == STATE_PARSE_URI) {
             URIState flag = parseURI();
             if (flag == PARSE_URI_AGAIN)
                 break;
@@ -488,6 +488,7 @@ AnalysisState HttpData::analysisRequest() {
         outBuffer_ += std::string(src_addr, src_addr + sbuf.st_size);
         return ANALYSIS_SUCCESS;
     }
+    return ANALYSIS_ERROR;
 }
 
 void HttpData::handleError(int fd, int code, std::string code_mesg) {
