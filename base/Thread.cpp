@@ -61,7 +61,7 @@ void* startThread(void *obj) {
     return NULL;
 }
 
-Thread::Thread(ThreadFunc &func, const std::string name)
+Thread::Thread(const ThreadFunc &func, const std::string &name)
     : func_(func), 
       joined_(false),
       pthreadId_(0),

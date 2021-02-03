@@ -8,7 +8,7 @@
 #include <deque>
 #include <queue>
 #include "Util.h"
-//#include "base/Logging.h"
+#include "base/Logging.h"
 #include <arpa/inet.h>
 #include <iostream>
 
@@ -100,7 +100,7 @@ std::vector<std::shared_ptr<Channel>> Epoll::getEventsFromRequest(int events_num
     return ret;
 }
 
-void Epoll::handlerExpired() {
+void Epoll::handleExpired() {
     timeManager_.handleExpiredEvent();
 }
 

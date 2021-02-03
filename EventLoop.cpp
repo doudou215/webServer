@@ -18,8 +18,8 @@ int createEventFd() {
 
 EventLoop::EventLoop():
     looping_(false),
-    threadId_(Current::tid()),
-    poller_(new Epoll(this)),
+    threadId_(CurrentThread::tid()),
+    poller_(new Epoll()),
     wakeupFd_(createEventFd()),
     wakeupChannel_(new Channel(this, wakeupFd_)),
     callingPendingFunctors_(false),
@@ -27,8 +27,8 @@ EventLoop::EventLoop():
     eventHandling_(false) {
         t_loopInThisThread = this;
         wakeupChannel_->setEvents(EPOLLIN | EPOLLET);
-        wakeupChannel_->setReadHandler(std::bind(&EventLoop::handleRead(this)));
-        wakeupChannel_->setConnHanler(std::bind(&EventLoop::hanleConn, this));
+        wakeupChannel_->setReadHandler(std::bind(&EventLoop::handleRead, this));
+        wakeupChannel_->setConnHanler(std::bind(&EventLoop::handleConn, this));
         poller_->epoll_add(wakeupChannel_, 0);
     }
 
@@ -70,8 +70,8 @@ void EventLoop::runInLoop(Functors &&cb) {
 
 void EventLoop::queueInLoop(Functors &&cb) {
     {
-        MutexLockGuard lock(&mutex_);
-        pendingFunctors.push_back(std::move(cb));
+        MutexLockGuard lock(mutex_);
+        pendingFunctors_.push_back(std::move(cb));
     }
     if (!isInLoopTrehad() || callingPendingFunctors_)
         wakeup();
@@ -99,13 +99,13 @@ void EventLoop::loop() {
 }
 
 void EventLoop::doPendingFunctors() {
-    std::vector<Functors> do;
+    std::vector<Functors> functors;
     {
         MutexLockGuard lock(mutex_);
-        do.swap(pendingFunctors_);
+        functors.swap(pendingFunctors_);
     }
     callingPendingFunctors_ = true;
-    for (auto it : do)
+    for (auto it : functors)
         it();
     callingPendingFunctors_ = false;
 }

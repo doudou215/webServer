@@ -1,7 +1,7 @@
 #pragma once
 #include <memory>
 #include "EventLoopThread.h"
-// #include "base/Logging.h"
+#include "base/Logging.h"
 #include "base/noncopyable.h"
 
 class EventLoopThreadPool : noncopyable {

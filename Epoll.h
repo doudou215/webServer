@@ -19,7 +19,7 @@ class Epoll {
     std::vector<std::shared_ptr<Channel>> getEventsFromRequest(int events_num);
     void add_timer(SPChannel channel, int timeout);
     int getEpollFd() { return epollFd_; }
-    void handlerExpired();
+    void handleExpired();
 
  private:
     static const int MAXFDS = 100000;
