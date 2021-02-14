@@ -74,7 +74,7 @@ class HttpData : public std::enable_shared_from_this<HttpData> {
     std::shared_ptr<Channel> getChannel() { return channel_; }
     EventLoop *getLoop() { return loop_;}
     void handleClose();
-    void newEvent(); // ?
+    void newEvent(); // see reference in Server.cpp 88
 
  private:
     EventLoop *loop_;
@@ -94,7 +94,7 @@ class HttpData : public std::enable_shared_from_this<HttpData> {
     ProcessState state_;
     ParseState hState_; //?
     bool keepAlive_;
-    std::map<std::string, std::string> headers_;
+    std::map<std::string, std::string> headers_; // store request headers
 
     void handleRead();
     void handleWrite();

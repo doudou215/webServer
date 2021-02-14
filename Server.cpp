@@ -85,7 +85,8 @@ void Server::handNewConn() {
 
     shared_ptr<HttpData> req_info(new HttpData(loop, accept_fd));
     req_info->getChannel()->setHolder(req_info);
+    // add new http to owner loop.
     loop->queueInLoop(std::bind(&HttpData::newEvent, req_info));
   }
-  acceptChannel_->setEvents(EPOLLIN | EPOLLET);
+  acceptChannel_->setEvents(EPOLLIN | EPOLLET); // for next connection
 }

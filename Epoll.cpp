@@ -75,8 +75,10 @@ void Epoll::epoll_del(SPChannel channel) {
 std::vector<std::shared_ptr<Channel>> Epoll::poll() {
     while(true) {
         int events_num = epoll_wait(epollFd_, &(*events_.begin()), events_.size(), WAITING_TIME);
-        if (events_num < 0)
+        if (events_num < 0) {
             perror("epoll_wait error");
+            continue;
+        }
         std::vector<SPChannel> request = getEventsFromRequest(events_num);
         if (request.size() > 0)
             return request;

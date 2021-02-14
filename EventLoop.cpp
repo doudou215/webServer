@@ -89,7 +89,7 @@ void EventLoop::loop() {
         ret = poller_->poll();
         eventHandling_ = true;
         for (auto it : ret)
-            it->handleEvents();
+            it->handleEvents(); // handle different events due to Revent
         eventHandling_ = false;
         doPendingFunctors();
         poller_->handleExpired();

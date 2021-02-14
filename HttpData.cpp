@@ -124,7 +124,7 @@ HttpData::HttpData(EventLoop *loop, int connfd)
 }
 
 void HttpData::handleRead() {
-    __uint32_t &ev = channel_->getEvents(); // not clear
+    __uint32_t &ev = channel_->getEvents(); // for next conncetion
     
     do {
         bool zero = false;
@@ -141,7 +141,7 @@ void HttpData::handleRead() {
             handleError(fd_, 400, "Bad Request");
             break;
         }
-
+        // zero = true means peer close the connection
         if (zero) {
             connectionState_ = H_DISCONNECTING;
             if (num == 0)
@@ -214,14 +214,14 @@ void HttpData::handleRead() {
             handleWrite();
         }
 
-        // not clear this section used for what ?
+        // a complete request
         if (!error_ && state_ == STATE_FINISH) {
             this->reset();
 
             if (connectionState_ != H_DISCONNECTING && inBuffer_.size() > 0)
                 handleRead();
         }
-
+        // mot a complete request
         else if (!error_ && connectionState_ != H_DISCONNECTED)
             ev |= EPOLLIN;
     }
@@ -251,11 +251,11 @@ URIState HttpData::parseURI() {
     
     std::string request_line = str.substr(0, pos);
     if (str.size() > pos + 1)
-        str = str.substr(pos + 1);
+        str = str.substr(pos + 1); //delete '\r', make the inBuffer_ begin with '\n..'
     else
         str.clear();
     std::cout<<str[0]<<std::endl;
-
+    // request_line = "GET / HTTP/1.1" 
     //size_t length = request_line.size();
     int posGet = request_line.find("GET");
     int posPost = request_line.find("POST");
@@ -322,10 +322,10 @@ URIState HttpData::parseURI() {
 HeaderState HttpData::parseHeaders() {
     std::string &str = inBuffer_;
     int key_begin = -1, key_end = -1, value_begin = -1, value_end = -1;
-    int last_read_position = -1;
+    int last_read_position = 0;
     bool not_finish = true;
     size_t i = 0;
-    for (; i < str.size() && !not_finish; i++) {
+    for (; i < str.size() && not_finish; i++) {
         switch (hState_)
         {
         case H_START: {
@@ -418,6 +418,7 @@ HeaderState HttpData::parseHeaders() {
     return PARSE_HEADER_AGAIN;
 }
 
+// construct reply
 AnalysisState HttpData::analysisRequest() {
     if (method_ == METHOD_POST) {
 
@@ -550,7 +551,7 @@ void HttpData::reset() {
 
 // highly attention, invoke handleConn() in channel::handleEvent()
 void HttpData::handleConn() {
-    seperateTimer();
+    seperateTimer(); // stop the timer.
     __uint32_t &event = channel_->getEvents();
 
     if (!error_ && connectionState_ == H_CONNECTED) {

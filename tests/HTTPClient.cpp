@@ -16,7 +16,7 @@ using namespace std;
 
 #define MAXSIZE 1024
 #define IPADDRESS "127.0.0.1"
-#define SERV_PORT 8888
+#define SERV_PORT 80
 #define FDSIZE 1024
 #define EPOLLEVENTS 20
 
@@ -50,6 +50,7 @@ int main(int argc, char *argv[]) {
   buff[0] = '\0';
   // 发空串
   const char *p = " ";
+  /*
   if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == 0) {
     setSocketNonBlocking1(sockfd);
     cout << "1:" << endl;
@@ -64,9 +65,9 @@ int main(int argc, char *argv[]) {
     perror("err1");
   }
   sleep(1);
-
+  */
   // 发"GET  HTTP/1.1"
-  p = "GET  HTTP/1.1";
+  p = "GET /hello HTTP/1.1\r\nHost: zyl\r\n\r\n";
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
   if (connect(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == 0) {
     setSocketNonBlocking1(sockfd);
@@ -81,6 +82,7 @@ int main(int argc, char *argv[]) {
   } else {
     perror("err2");
   }
+  /*
   sleep(1);
 
   // 发
@@ -104,6 +106,7 @@ int main(int argc, char *argv[]) {
   } else {
     perror("err3");
   }
+  */
   return 0;
 }
 

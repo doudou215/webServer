@@ -62,6 +62,7 @@ class Channel {
     void handleWrite();
     void handleError();
     void handleConn();
+    
     void handleEvents() {
         event = 0;
         // peer stop connection, we will receive a FIN
