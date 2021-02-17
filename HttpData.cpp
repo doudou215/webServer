@@ -216,12 +216,12 @@ void HttpData::handleRead() {
 
         // a complete request
         if (!error_ && state_ == STATE_FINISH) {
-            this->reset();
+            this->reset(); // member function.
 
             if (connectionState_ != H_DISCONNECTING && inBuffer_.size() > 0)
                 handleRead();
         }
-        // mot a complete request
+        // not a complete request
         else if (!error_ && connectionState_ != H_DISCONNECTED)
             ev |= EPOLLIN;
     }
@@ -566,7 +566,7 @@ void HttpData::handleConn() {
             }
             event |= EPOLLET;
             loop_->updatePoller(channel_, timeout);
-            std::cout<<"test HttpData::handleConn if event = 0 "<<std::endl;
+            std::cout<<"test HttpData::handleConn if event != 0 "<<std::endl;
         }
         else if (keepAlive_) {
             int timeout = DEFAULT_KEEP_ALIVE_TIME;
@@ -586,6 +586,7 @@ void HttpData::handleConn() {
             event = (EPOLLOUT | EPOLLET);
     }
     else {
+        std::cout<<"ready for closing"<<std::endl;
         loop_->runInLoop(bind(&HttpData::handleClose, shared_from_this()));
     }
 

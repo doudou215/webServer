@@ -73,10 +73,10 @@ int main(int argc, char *argv[]) {
     setSocketNonBlocking1(sockfd);
     cout << "2:" << endl;
     ssize_t n = write(sockfd, p, strlen(p));
-    cout << "strlen(p) = " << strlen(p) << endl;
+    // cout << "strlen(p) = " << strlen(p) << endl;
     sleep(1);
     n = read(sockfd, buff, 4096);
-    cout << "n=" << n << endl;
+    // cout << "n=" << n << endl;
     printf("%s", buff);
     close(sockfd);
   } else {

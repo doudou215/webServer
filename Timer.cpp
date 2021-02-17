@@ -8,7 +8,7 @@
 TimerNode::TimerNode(SPHttpData data, int timeout): delete_(false), httpData_(data) {
     struct timeval now;
     gettimeofday(&now, NULL);
-    expiredTime_ = (now.tv_sec % 1000) * 1000 + now.tv_usec / 1000 + timeout;
+    expiredTime_ = (now.tv_sec % 10000) * 1000 + now.tv_usec / 1000 + timeout;
 
 }
 
@@ -25,14 +25,14 @@ TimerNode::TimerNode(TimerNode &tn) : expiredTime_(0), httpData_(tn.httpData_) {
 void TimerNode::update(int timeout) {
     struct timeval now;
     gettimeofday(&now, NULL);
-    expiredTime_ = (now.tv_sec % 1000) * 1000 + now.tv_usec / 1000 + timeout;
+    expiredTime_ = (now.tv_sec % 10000) * 1000 + now.tv_usec / 1000 + timeout;
 }
 
 bool TimerNode::isValid() {
     size_t expiredTime;
     struct timeval now;
     gettimeofday(&now, NULL);
-    expiredTime = (now.tv_sec % 1000) * 1000 + now.tv_usec / 1000;
+    expiredTime = (now.tv_sec % 10000) * 1000 + now.tv_usec / 1000;
     if (expiredTime > expiredTime_) {
         setDelete();
         //httpData_->reset();

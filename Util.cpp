@@ -47,11 +47,14 @@ ssize_t readn(int fd, std::string &inBuffer, bool &zero) {
         continue;
       else if (errno == EAGAIN) {
         return readSum;
-      } else {
+      } 
+      else {
         perror("read error");
         return -1;
       }
-    } else if (nread == 0) {
+    }
+    // only peer stop writing cause the nread = 0. 
+    else if (nread == 0) {
       // printf("redsum = %d\n", readSum);
       zero = true;
       break;
