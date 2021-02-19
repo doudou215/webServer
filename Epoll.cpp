@@ -11,6 +11,8 @@
 #include "base/Logging.h"
 #include <arpa/inet.h>
 #include <iostream>
+#include <stdio.h>
+#include <pthread.h>
 
 const int EVENTSNUM = 4096;
 const int WAITING_TIME = 10000; // counts at milliseconds, and equal to 10s
@@ -28,6 +30,7 @@ void Epoll::epoll_add(SPChannel channel, int timeout) {
     int fd = channel->getFd();
     if (timeout > 0) {
         add_timer(channel, timeout);
+        fd2http_[fd] = channel->getHolder();
     }
     struct epoll_event ev;
     ev.events = channel->getEvents();
@@ -52,6 +55,7 @@ void Epoll::epoll_mod(SPChannel channel, int timeout) {
         ev.events = channel->getEvents();
         ev.data.fd = fd;
         if (epoll_ctl(epollFd_, EPOLL_CTL_MOD, fd, &ev) < 0) {
+            printf("thread Id %lu\n", pthread_self());
             perror("epoll_ctl mod error");
             fd2chanel_[fd].reset();
         }

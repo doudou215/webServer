@@ -2,7 +2,7 @@
 #include <sys/time.h>
 #include <unistd.h>
 #include <queue>
-
+#include <iostream>
 // gettimeofday gives the number of seconds and microseconds since the Epoch
 // and aslo the timeout means milliseconds, what a load of crap
 TimerNode::TimerNode(SPHttpData data, int timeout): delete_(false), httpData_(data) {
@@ -34,6 +34,7 @@ bool TimerNode::isValid() {
     gettimeofday(&now, NULL);
     expiredTime = (now.tv_sec % 10000) * 1000 + now.tv_usec / 1000;
     if (expiredTime > expiredTime_) {
+        std::cout<<"expired time"<<std::endl;
         setDelete();
         //httpData_->reset();
         return false;

@@ -71,7 +71,7 @@ void EventLoop::runInLoop(Functors &&cb) {
 void EventLoop::queueInLoop(Functors &&cb) {
     {
         MutexLockGuard lock(mutex_);
-        pendingFunctors_.push_back(std::move(cb));
+        pendingFunctors_.emplace_back(std::move(cb));
     }
     if (!isInLoopTrehad() || callingPendingFunctors_)
         wakeup();
@@ -88,7 +88,7 @@ void EventLoop::loop() {
         ret.clear();
         ret = poller_->poll();
         eventHandling_ = true;
-        for (auto it : ret)
+        for (auto &it : ret)
             it->handleEvents(); // handle different events due to Revent
         eventHandling_ = false;
         doPendingFunctors();
@@ -105,7 +105,7 @@ void EventLoop::doPendingFunctors() {
         functors.swap(pendingFunctors_);
     }
     callingPendingFunctors_ = true;
-    for (auto it : functors)
+    for (auto &it : functors)
         it();
     callingPendingFunctors_ = false;
 }

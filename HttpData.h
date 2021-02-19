@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <iostream>
 #include "Timer.h"
 
 class EventLoop;
@@ -67,7 +68,10 @@ class MimeType {
 class HttpData : public std::enable_shared_from_this<HttpData> {
  public:
     HttpData(EventLoop *loop, int connfd);
-    ~HttpData() { close(fd_); }
+    ~HttpData() { 
+        std::cout<<"Http close"<<std::endl;
+        close(fd_); 
+    }
     void reset();
     void seperateTimer(); // ?
     void linkTimer(std::shared_ptr<TimerNode> mtimer) { timer_ = mtimer; }
